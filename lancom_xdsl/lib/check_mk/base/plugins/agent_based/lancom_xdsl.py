@@ -3,6 +3,7 @@
 
 # (c) 2021 Heinlein Consulting GmbH
 #          Robert Sander <r.sander@heinlein-support.de>
+# (c) 2023 Niklas Merkelt <niklasmerkelt@mail.de>
 
 # This is free software;  you can redistribute it and/or modify it
 # under the  terms of the  GNU General Public License  as published by
@@ -15,14 +16,19 @@
 # to the Free Software Foundation, Inc., 51 Franklin St,  Fifth Floor,
 # Boston, MA 02110-1301 USA.
 
-from typing import Optional
+from typing import (
+    Any,
+    Dict,
+    Mapping,
+    Optional,
+    Tuple,
+)
 
 from .agent_based_api.v1 import (
     check_levels,
     register,
     render,
     startswith,
-    Metric,
     Result,
     Service,
     SNMPTree,
@@ -31,13 +37,8 @@ from .agent_based_api.v1 import (
 from .agent_based_api.v1.type_defs import (
     CheckResult,
     DiscoveryResult,
-    StringTable,
 )
 
-from .utils.interfaces import (
-    get_traffic_levels,
-    get_specific_traffic_levels,
-)
 
 def parse_lancom_xdsl(string_table):
     section = {}
@@ -65,10 +66,42 @@ def discover_lancom_xdsl(section) -> DiscoveryResult:
         if data['state'] == 5:
             yield Service(item=item, parameters={'discovered': data})
 
+LevelSpec = Tuple[Optional[str], Tuple[Optional[float], Optional[float]]]
+GeneralTrafficLevels = Dict[Tuple[str, str], LevelSpec]
+
+def _get_traffic_levels(params: Mapping[str, Any]) -> GeneralTrafficLevels:
+    traffic_levels = params.get("traffic", [])
+    traffic_levels += [("total", vs) for vs in params.get("total_traffic", {}).get("levels", [])]
+
+    # Now bring the levels in a structure which is easily usable for the check
+    # and also convert direction="both" to single in/out entries
+    levels: GeneralTrafficLevels = {
+        ("in", "upper"): (None, (None, None)),
+        ("out", "upper"): (None, (None, None)),
+        ("in", "lower"): (None, (None, None)),
+        ("out", "lower"): (None, (None, None)),
+        ("total", "lower"): (None, (None, None)),
+        ("total", "upper"): (None, (None, None)),
+    }
+    for level in traffic_levels:
+        traffic_dir = level[0]
+        up_or_low = level[1][0]
+        level_type = level[1][1][0]
+        level_value = level[1][1][1]
+
+        if traffic_dir == "both":
+            levels[("in", up_or_low)] = (level_type, level_value)
+            levels[("out", up_or_low)] = (level_type, level_value)
+        else:
+            levels[(traffic_dir, up_or_low)] = (level_type, level_value)
+
+    return levels
+
+
 def _check_lancom_xdsl_metric(value, discovered, metric_name, params, direction, label, render_func):
     p = { 'traffic': params }
-    levels = get_traffic_levels(p)
-    
+    levels = _get_traffic_levels(p)
+
     both = levels.get((direction, 'both'), (None, (None, None)))
     lower = levels.get((direction, 'lower'), (None, (None, None)))
     upper = levels.get((direction, 'upper'), (None, (None, None)))
@@ -186,23 +219,23 @@ register.snmp_section(
     parse_function=parse_lancom_xdsl,
     fetch=[
         SNMPTree(
-            base=".1.3.6.1.4.1.2356.11.1.99.1",
+            base=".1.3.6.1.4.1.2356.11.1.99.1", # XdslAdsl
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
         SNMPTree(
-            base=".1.3.6.1.4.1.2356.11.1.99.2",
+            base=".1.3.6.1.4.1.2356.11.1.99.2", # XdslVdsl1
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
         SNMPTree(
-            base=".1.3.6.1.4.1.2356.11.1.99.3",
+            base=".1.3.6.1.4.1.2356.11.1.99.3", # XdslVdsl2
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
-        SNMPTree(
-            base=".1.3.6.1.4.1.2356.11.1.99.4",
+		SNMPTree(
+            base=".1.3.6.1.4.1.2356.11.1.99.4", # Xdsl1
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
-        SNMPTree(
-            base=".1.3.6.1.4.1.2356.11.1.99.5",
+		SNMPTree(
+            base=".1.3.6.1.4.1.2356.11.1.99.5", # Xdsl2
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
     ],
