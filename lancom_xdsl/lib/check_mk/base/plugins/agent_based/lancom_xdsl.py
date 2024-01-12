@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
+##!/usr/bin/env python3
 # -*- encoding: utf-8; py-indent-offset: 4 -*-
 
 # (c) 2021 Heinlein Consulting GmbH
 #          Robert Sander <r.sander@heinlein-support.de>
-# (c) 2023 Niklas Merkelt <niklasmerkelt@mail.de>
 
 # This is free software;  you can redistribute it and/or modify it
 # under the  terms of the  GNU General Public License  as published by
@@ -230,11 +229,11 @@ register.snmp_section(
             base=".1.3.6.1.4.1.2356.11.1.99.3", # XdslVdsl2
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
-		SNMPTree(
+        SNMPTree(
             base=".1.3.6.1.4.1.2356.11.1.99.4", # Xdsl1
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
-		SNMPTree(
+        SNMPTree(
             base=".1.3.6.1.4.1.2356.11.1.99.5", # Xdsl2
             oids=[ "1", "2", "4", "5", "6", "7", "8", "9", "54", "14", "23" ],
         ),
