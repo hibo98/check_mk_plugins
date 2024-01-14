@@ -33,7 +33,7 @@ def check_lancom_vpn_licenses(section):
     licenses_used = section["licenses_used"]
     licenses_used_warn = 0.8 * licenses
     licenses_used_crit = 1.0 * licenses
-    yield Result(state=State.OK, summary=f"VPN Licenses a: {licenses_used}/{licenses}")
+    yield Result(state=State.OK, summary=f"VPN Licenses available: {licenses}")
     yield from check_levels(
         float(licenses_used),
         levels_upper=(licenses_used_warn, licenses_used_crit),
